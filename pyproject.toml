@@ -1,6 +1,6 @@
 [project]
 name = "ap-build"
-version = "0.0.0"
+version = "0.0.1"
 description = "The entrypoint of the Action Platform build images: install, build, test, lint and package a project with one verb per language"
 readme = "README.md"
 license = "MIT"
