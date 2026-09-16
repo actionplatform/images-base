@@ -1,0 +1,24 @@
+[project]
+name = "ap-build"
+version = "0.0.0"
+description = "The entrypoint of the Action Platform build images: install, build, test, lint and package a project with one verb per language"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+ap-build = "ap_build:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["ap_build"]
+
+[tool.ruff]
+line-length = 88

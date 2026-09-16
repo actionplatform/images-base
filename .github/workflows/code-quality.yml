@@ -1,0 +1,53 @@
+name: Code Quality
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check . && ruff format --check .
+      - run: pytest -q
+
+  templates:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: python
+            template: projects/web/python/fastapi
+          - language: node
+            template: projects/web/node/fastify
+          - language: go
+            template: projects/web/go/gin
+          - language: java
+            template: projects/web/java/spring
+          - language: ruby
+            template: projects/web/ruby/sinatra
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          repository: actionplatform/templates
+          path: templates
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: images/${{ matrix.language }}/Dockerfile
+          load: true
+          tags: build-${{ matrix.language }}:test
+          cache-from: type=gha,scope=build-${{ matrix.language }}
+          cache-to: type=gha,mode=max,scope=build-${{ matrix.language }}
+      - run: pipx run cookiecutter --no-input -o out templates/${{ matrix.template }} project_name=demo
+      - run: pipx run cookiecutter --no-input -o overlay templates/cloud/aws/lambda project_name=demo language=${{ matrix.language }} type=web ci=github && cp -R overlay/demo/. out/demo/
+      - run: docker run --rm -v "$PWD/out/demo:/w" build-${{ matrix.language }}:test install build test lint package

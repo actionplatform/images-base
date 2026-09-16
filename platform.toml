@@ -1,0 +1,13 @@
+[project]
+name = "images-base"
+type = "library"
+language = "python"
+ci = "github"
+
+[source_host]
+kind = "github"
+repo = "actionplatform/images-base"
+
+[release]
+strategy = "semver"
+changelog = "conventional"
