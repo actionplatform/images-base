@@ -104,7 +104,10 @@ def run(root: Path, verb: str) -> int:
         artifacts.mkdir(parents=True, exist_ok=True)
 
     return subprocess.run(
-        ["sh", "-c", line], cwd=root, env={**os.environ, "AP_ARTIFACTS": str(artifacts)}
+        ["sh", "-c", line],
+        cwd=root,
+        env={**os.environ, "AP_ARTIFACTS": str(artifacts)},
+        check=False,
     ).returncode
 
 
