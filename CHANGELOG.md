@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.0.2 — 2026-09-16
+
+### CI
+- **publish:** ghcr only — the secrets expression made the workflow invalid
+
 ## v0.0.1 — 2026-09-16
 
 ### Features
