@@ -26,11 +26,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/login-action@v3
-        if: ${{ secrets.DOCKERHUB_TOKEN != '' }}
-        with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - id: version
         run: |
           v="${GITHUB_REF_NAME#v}"
@@ -40,9 +35,7 @@ jobs:
       - uses: docker/metadata-action@v5
         id: meta
         with:
-          images: |
-            ghcr.io/${{ github.repository_owner }}/${{ matrix.kind }}-${{ matrix.language }}
-            ${{ secrets.DOCKERHUB_TOKEN != '' && format('docker.io/{0}/{1}-{2}', vars.DOCKERHUB_NAMESPACE || 'actionplatformio', matrix.kind, matrix.language) || '' }}
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.kind }}-${{ matrix.language }}
           tags: |
             type=raw,value=${{ steps.version.outputs.full }}
             type=raw,value=${{ steps.version.outputs.minor }}

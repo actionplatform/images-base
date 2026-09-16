@@ -20,7 +20,7 @@ docker run --rm -v "$PWD:/w" ghcr.io/actionplatform/build-node install build tes
 | <img src="assets/icons/java.svg" width="28" alt="Java"> <img src="assets/icons/kotlin.svg" width="28" alt="Kotlin"> | `build-java` | JDK 21 · <img src="assets/icons/maven.svg" width="14" alt=""> Maven 3.9 — Java and Kotlin | `runtime-java` — distroless `java21` |
 | <img src="assets/icons/ruby.svg" width="28" alt="Ruby"> | `build-ruby` | Ruby 3.3 · bundler · a compiler for native gems | `runtime-ruby` — `ruby:3.3-slim`, non-root (no distroless Ruby exists) |
 
-Every build image also carries `git`, `make`, `zip` and `ap-build`. Published on `ghcr.io/actionplatform/<image>` (and Docker Hub as `actionplatformio/<image>` when configured) as `<major>`, `<major.minor>`, `<version>` and `latest`, for `linux/amd64` and `linux/arm64`.
+Every build image also carries `git`, `make`, `zip` and `ap-build`. Published on `ghcr.io/actionplatform/<image>` as `<major>`, `<major.minor>`, `<version>` and `latest`, for `linux/amd64` and `linux/arm64`.
 
 ## ap-build
 
