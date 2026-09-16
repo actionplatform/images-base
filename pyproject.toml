@@ -22,3 +22,7 @@ packages = ["ap_build"]
 
 [tool.ruff]
 line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "PL"]
+ignore = ["PLR2004", "PLR0913", "E501"]

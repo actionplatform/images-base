@@ -69,6 +69,7 @@ class CommandTest(unittest.TestCase):
             capture_output=True,
             text=True,
             env={**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1])},
+            check=False,
         )
 
         self.assertEqual(result.returncode, 3)
