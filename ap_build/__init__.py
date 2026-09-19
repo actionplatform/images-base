@@ -1,17 +1,26 @@
-"""ap-build: one verb per step — install, build, test, lint, package — the same in every language.
+"""ap-build: one verb per step — install, build, test, lint, package, start — the same in every language.
 
 What a verb runs comes from `[build]` in the project's platform.toml; when the project says nothing, the language's convention (read from `[project] language`) does.
+
+`package` produces what a Lambda Web Adapter function runs: the app and its dependencies under `AP_ARTIFACTS`, plus `run.sh` (managed runtimes) with the start command baked in — or `bootstrap` (Go, provided.al2023). `start` runs the command that serves HTTP on `$PORT`.
 """
 
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 import tomllib
 from pathlib import Path
 
-VERBS = ("install", "build", "test", "lint", "package")
+VERBS = ("install", "build", "test", "lint", "package", "start")
+LANGUAGES = ("python", "node", "go", "java", "kotlin", "ruby")
+
+ARCH = os.environ.get("AP_ARCH", "arm64")
+PY_PLATFORM = {"arm64": "manylinux2014_aarch64", "x86_64": "manylinux2014_x86_64"}
+PY_VERSION = os.environ.get("AP_PYTHON", "3.12")
+GO_MAIN = "./cmd/server"
 
 DEFAULTS: dict[str, dict[str, str]] = {
     "python": {
@@ -19,40 +28,44 @@ DEFAULTS: dict[str, dict[str, str]] = {
         "build": "",
         "test": "poetry run pytest -q",
         "lint": "poetry run ruff check . && poetry run ruff format --check .",
+        "start": "python -m uvicorn app:app --host 0.0.0.0 --port ${PORT:-8080}",
     },
     "node": {
         "install": "[ -f package-lock.json ] && npm ci --no-audit --no-fund || npm install --no-audit --no-fund",
         "build": "npm run build",
         "test": "npm test",
         "lint": "npm run lint",
+        "start": "node dist/server.js",
     },
     "go": {
         "install": "go mod download",
         "build": "go build ./...",
         "test": "go test ./...",
         "lint": "go vet ./...",
+        "start": "./bootstrap",
     },
     "java": {
         "install": "mvn -B -q dependency:go-offline",
         "build": "mvn -B -q -DskipTests package",
         "test": "mvn -B -q test",
         "lint": "mvn -B -q checkstyle:check",
+        "start": "java -jar app.jar --server.port=${PORT:-8080}",
     },
     "kotlin": {
         "install": "mvn -B -q dependency:go-offline",
         "build": "mvn -B -q -DskipTests package",
         "test": "mvn -B -q test",
         "lint": "mvn -B -q verify -DskipTests",
+        "start": "java -jar app.jar --server.port=${PORT:-8080}",
     },
     "ruby": {
         "install": "bundle install",
         "build": "",
         "test": "bundle exec rspec",
         "lint": "bundle exec rubocop",
+        "start": "bundle exec rackup -s webrick -o 0.0.0.0 -p ${PORT:-8080}",
     },
 }
-
-PACKAGE = "[ -f Makefile ] && grep -q '^build-ApiFunction' Makefile && make build-ApiFunction ARTIFACTS_DIR=\"${AP_ARTIFACTS:-$PWD/.ap-build/package}\" || echo 'nothing to package: no build-ApiFunction recipe in the Makefile'"
 
 
 def manifest(root: Path) -> dict:
@@ -65,30 +78,165 @@ def manifest(root: Path) -> dict:
         return tomllib.load(handle)
 
 
+def language_of(root: Path) -> str:
+    language = (manifest(root).get("project") or {}).get("language", "")
+
+    if language not in LANGUAGES:
+        raise SystemExit(
+            f"ap-build: [project] language {language!r} is not one of {', '.join(LANGUAGES)}"
+        )
+
+    return language
+
+
 def command(root: Path, verb: str) -> str:
-    """The shell line for `verb`: the project's own under [build], else the language's default."""
-    data = manifest(root)
-    own = (data.get("build") or {}).get(verb)
+    """The shell line for `verb`: the project's own under [build], else the language's default. `package` has no default line — it is assembled here."""
+    own = (manifest(root).get("build") or {}).get(verb)
 
     if own is not None:
         return str(own)
 
     if verb == "package":
-        return PACKAGE
+        return ""
 
-    language = (data.get("project") or {}).get("language", "")
+    return DEFAULTS[language_of(root)][verb]
 
-    if language not in DEFAULTS:
-        raise SystemExit(
-            f"ap-build: no [build] {verb} in platform.toml and no default for language {language!r}"
-        )
 
-    return DEFAULTS[language][verb]
+def sh(line: str, root: Path, env: dict[str, str] | None = None) -> None:
+    print(f"$ {line}", flush=True)
+    code = subprocess.run(
+        ["sh", "-c", line], cwd=root, env={**os.environ, **(env or {})}, check=False
+    ).returncode
+
+    if code != 0:
+        raise SystemExit(code)
+
+
+def copy_tree(source: Path, target: Path) -> None:
+    if source.is_dir():
+        shutil.copytree(source, target, dirs_exist_ok=True, symlinks=True)
+    elif source.exists():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+
+
+def write_start(root: Path, artifacts: Path, name: str = "run.sh") -> Path:
+    script = artifacts / name
+    script.write_text(
+        f'#!/bin/bash\nset -e\ncd "$(dirname "$0")"\nexec {command(root, "start")}\n'
+    )
+    script.chmod(0o755)
+
+    return script
+
+
+def package(root: Path, artifacts: Path) -> None:
+    """The app, its dependencies and its start script under `artifacts`, shaped for the Lambda Web Adapter."""
+    own = (manifest(root).get("build") or {}).get("package")
+    artifacts.mkdir(parents=True, exist_ok=True)
+
+    if own:
+        sh(str(own), root, {"AP_ARTIFACTS": str(artifacts)})
+        write_start(root, artifacts)
+
+        return
+
+    PACKAGERS[language_of(root)](root, artifacts)
+
+
+def package_python(root: Path, artifacts: Path) -> None:
+    dist = root / ".ap-build" / "dist"
+    shutil.rmtree(dist, ignore_errors=True)
+    sh(f'poetry build --no-interaction -f wheel -o "{dist}"', root)
+    sh(
+        f'python -m pip install --quiet --upgrade --target "{artifacts}" '
+        f"--platform {PY_PLATFORM[ARCH]} --python-version {PY_VERSION} "
+        f'--implementation cp --only-binary=:all: "{dist}"/*.whl',
+        root,
+    )
+    write_start(root, artifacts)
+
+
+def package_node(root: Path, artifacts: Path) -> None:
+    sh(command(root, "install"), root)
+    sh(command(root, "build"), root)
+    sh("npm prune --omit=dev --no-audit --no-fund", root)
+
+    for name in ("dist", "node_modules", "package.json"):
+        copy_tree(root / name, artifacts / name)
+
+    write_start(root, artifacts)
+
+
+def package_go(root: Path, artifacts: Path) -> None:
+    main = (manifest(root).get("build") or {}).get("main") or GO_MAIN
+    sh(
+        f'GOOS=linux GOARCH={ARCH} CGO_ENABLED=0 go build -ldflags="-s -w" '
+        f'-o "{artifacts}/bootstrap" {main}',
+        root,
+    )
+
+
+def package_jvm(root: Path, artifacts: Path) -> None:
+    sh(command(root, "build"), root)
+    jars = sorted(
+        p
+        for p in (root / "target").glob("*.jar")
+        if not p.name.endswith(("-sources.jar", "-javadoc.jar"))
+    )
+
+    if not jars:
+        raise SystemExit("ap-build package: mvn package produced no jar under target/")
+
+    shutil.copy2(jars[-1], artifacts / "app.jar")
+    write_start(root, artifacts)
+
+
+def package_ruby(root: Path, artifacts: Path) -> None:
+    env = {
+        "BUNDLE_PATH": "vendor/bundle",
+        "BUNDLE_WITHOUT": "development:test",
+        "BUNDLE_DEPLOYMENT": "false",
+        "BUNDLE_FROZEN": "false",
+    }
+    sh("bundle install --quiet", root, env)
+
+    for item in root.iterdir():
+        if item.name in {".git", ".ap-build", "spec", "test", "tmp", "log", ".bundle"}:
+            continue
+
+        copy_tree(item, artifacts / item.name)
+
+    bundle = artifacts / ".bundle"
+    bundle.mkdir(exist_ok=True)
+    (bundle / "config").write_text(
+        'BUNDLE_PATH: "vendor/bundle"\nBUNDLE_WITHOUT: "development:test"\n'
+    )
+    write_start(root, artifacts)
+
+
+PACKAGERS = {
+    "python": package_python,
+    "node": package_node,
+    "go": package_go,
+    "java": package_jvm,
+    "kotlin": package_jvm,
+    "ruby": package_ruby,
+}
 
 
 def run(root: Path, verb: str) -> int:
     if verb not in VERBS:
         raise SystemExit(f"ap-build: unknown verb {verb!r}; one of {', '.join(VERBS)}")
+
+    if verb == "package":
+        artifacts = Path(
+            os.environ.get("AP_ARTIFACTS") or root / ".ap-build" / "package"
+        )
+        print(f"ap-build package → {artifacts}", flush=True)
+        package(root, artifacts)
+
+        return 0
 
     line = command(root, verb)
 
@@ -98,17 +246,8 @@ def run(root: Path, verb: str) -> int:
         return 0
 
     print(f"ap-build {verb}: {line}", flush=True)
-    artifacts = Path(os.environ.get("AP_ARTIFACTS") or root / ".ap-build" / "package")
 
-    if verb == "package":
-        artifacts.mkdir(parents=True, exist_ok=True)
-
-    return subprocess.run(
-        ["sh", "-c", line],
-        cwd=root,
-        env={**os.environ, "AP_ARTIFACTS": str(artifacts)},
-        check=False,
-    ).returncode
+    return subprocess.run(["sh", "-c", line], cwd=root, check=False).returncode
 
 
 def main(argv: list[str] | None = None) -> int:

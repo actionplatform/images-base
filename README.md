@@ -30,6 +30,7 @@ The entrypoint. `ap-build <verb>…` runs, in the current directory, what `[buil
 [build]
 install = "npm ci"
 test    = "vitest run"
+start   = "node dist/server.js"
 ```
 
 | Verb | <img src="assets/icons/python.svg" width="14" alt=""> python | <img src="assets/icons/nodejs.svg" width="14" alt=""> node | <img src="assets/icons/go.svg" width="14" alt=""> go | <img src="assets/icons/java.svg" width="14" alt=""> java · kotlin | <img src="assets/icons/ruby.svg" width="14" alt=""> ruby |
@@ -38,7 +39,12 @@ test    = "vitest run"
 | `build` | — | `npm run build` | `go build ./...` | `mvn -DskipTests package` | — |
 | `test` | `pytest` | `npm test` | `go test ./...` | `mvn test` | `bundle exec rspec` |
 | `lint` | `ruff check && ruff format --check` | `npm run lint` | `go vet ./...` | `mvn checkstyle:check` | `bundle exec rubocop` |
-| `package` | `make build-ApiFunction` when the Makefile has it — the <img src="assets/icons/aws.svg" width="14" alt=""> `aws/lambda` overlay's recipe — into `AP_ARTIFACTS` (default `.ap-build/package`) | same | same | same | same |
+| `start` | `uvicorn app:app --port $PORT` | `node dist/server.js` | `./bootstrap` | `java -jar app.jar --server.port=$PORT` | `rackup -s webrick -p $PORT` |
+| `package` | wheel + deps for the target platform | `dist/` + pruned `node_modules` | static `bootstrap` from `./cmd/server` | `target/*.jar` → `app.jar` | app + `vendor/bundle` |
+
+`package` assembles what a **Lambda Web Adapter** function runs, under `AP_ARTIFACTS` (default `.ap-build/package`): the app, its dependencies and `run.sh` — `exec <start>` — for the managed runtimes, or `bootstrap` for Go on `provided.al2023`. `AP_ARCH` (`arm64`, default, or `x86_64`) and `AP_PYTHON` (`3.12`) pick the target. A project with its own `[build] package` line runs that instead and still gets `run.sh`; `[build] main` names the Go package to build.
+
+The contract every web project honours: **serve HTTP on `$PORT`**. That is what lets one cloud overlay deploy every language.
 
 A verb prints the line it runs and exits with its status; an empty line is a no-op. `pip install .` gives the same command on a machine without Docker.
 
