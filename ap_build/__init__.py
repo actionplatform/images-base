@@ -68,14 +68,18 @@ DEFAULTS: dict[str, dict[str, str]] = {
 }
 
 
-def manifest(root: Path) -> dict:
-    path = root / "platform.toml"
+def manifest_of(root: Path, name: str) -> dict:
+    path = root / name
 
     if not path.exists():
         return {}
 
     with path.open("rb") as handle:
         return tomllib.load(handle)
+
+
+def manifest(root: Path) -> dict:
+    return manifest_of(root, "platform.toml")
 
 
 def language_of(root: Path) -> str:
@@ -144,16 +148,65 @@ def package(root: Path, artifacts: Path) -> None:
     PACKAGERS[language_of(root)](root, artifacts)
 
 
+EXCLUDED = {
+    ".git",
+    ".ap-build",
+    ".venv",
+    ".code_quality",
+    ".github",
+    ".gitlab-ci.yml",
+    "bitbucket-pipelines.yml",
+    "Jenkinsfile",
+    "tests",
+    "test",
+    "spec",
+    "dist",
+    "target",
+    "node_modules",
+    "vendor",
+    "tmp",
+    "log",
+    "template.yaml",
+    "samconfig.toml",
+    "Makefile",
+    "requirements",
+    "DEPLOY.md",
+}
+
+
+def copy_sources(root: Path, artifacts: Path, extra: set[str] | None = None) -> None:
+    skip = EXCLUDED | (extra or set())
+
+    for item in root.iterdir():
+        if item.name in skip or item.name.endswith((".lock", ".md")):
+            continue
+
+        copy_tree(item, artifacts / item.name)
+
+
 def package_python(root: Path, artifacts: Path) -> None:
-    dist = root / ".ap-build" / "dist"
-    shutil.rmtree(dist, ignore_errors=True)
-    sh(f'poetry build --no-interaction -f wheel -o "{dist}"', root)
-    sh(
+    pip = (
         f'python -m pip install --quiet --upgrade --target "{artifacts}" '
         f"--platform {PY_PLATFORM[ARCH]} --python-version {PY_VERSION} "
-        f'--implementation cp --only-binary=:all: "{dist}"/*.whl',
-        root,
+        f"--implementation cp --only-binary=:all:"
     )
+    poetry = (manifest_of(root, "pyproject.toml").get("tool") or {}).get("poetry") or {}
+
+    if poetry.get("package-mode", True):
+        dist = root / ".ap-build" / "dist"
+        shutil.rmtree(dist, ignore_errors=True)
+        sh(f'poetry build --no-interaction -f wheel -o "{dist}"', root)
+        sh(f'{pip} "{dist}"/*.whl', root)
+    else:
+        requirements = root / ".ap-build" / "requirements.txt"
+        requirements.parent.mkdir(parents=True, exist_ok=True)
+        sh(
+            f'poetry export --no-interaction --only main --without-hashes -f requirements.txt -o "{requirements}"',
+            root,
+        )
+        sh(f'{pip} -r "{requirements}"', root)
+        copy_sources(root, artifacts, {"pyproject.toml", "poetry.lock"})
+
     write_start(root, artifacts)
 
 
@@ -200,12 +253,8 @@ def package_ruby(root: Path, artifacts: Path) -> None:
         "BUNDLE_FROZEN": "false",
     }
     sh("bundle install --quiet", root, env)
-
-    for item in root.iterdir():
-        if item.name in {".git", ".ap-build", "spec", "test", "tmp", "log", ".bundle"}:
-            continue
-
-        copy_tree(item, artifacts / item.name)
+    copy_sources(root, artifacts, {".bundle"})
+    copy_tree(root / "Gemfile.lock", artifacts / "Gemfile.lock")
 
     bundle = artifacts / ".bundle"
     bundle.mkdir(exist_ok=True)
