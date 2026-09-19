@@ -39,6 +39,10 @@ jobs:
         with:
           repository: actionplatform/templates
           path: templates
+      - uses: actions/checkout@v5
+        with:
+          repository: actionplatform/apx-aws-lambda
+          path: plugin
       - uses: docker/setup-buildx-action@v3
       - uses: docker/build-push-action@v6
         with:
@@ -49,5 +53,6 @@ jobs:
           cache-from: type=gha,scope=build-${{ matrix.language }}
           cache-to: type=gha,mode=max,scope=build-${{ matrix.language }}
       - run: pipx run cookiecutter --no-input -o out templates/${{ matrix.template }} project_name=demo
-      - run: pipx run cookiecutter --no-input -o overlay templates/cloud/aws/lambda project_name=demo language=${{ matrix.language }} type=web ci=github && cp -R overlay/demo/. out/demo/
+      - run: pipx run cookiecutter --no-input -o overlay plugin/apx_aws_lambda/overlays/cloud/aws/lambda project_name=demo language=${{ matrix.language }} type=web ci=github && cp -R overlay/demo/. out/demo/
       - run: docker run --rm -v "$PWD/out/demo:/w" build-${{ matrix.language }}:test install build test lint package
+      - run: test -s out/demo/.ap-build/package/run.sh || test -s out/demo/.ap-build/package/bootstrap

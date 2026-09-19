@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import sys
 import unittest
@@ -7,7 +8,15 @@ from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from ap_build import VERBS, command, main  # noqa: E402
+from ap_build import (  # noqa: E402
+    DEFAULTS,
+    LANGUAGES,
+    PACKAGERS,
+    VERBS,
+    command,
+    main,
+    package,
+)
 
 
 class CommandTest(unittest.TestCase):
@@ -38,10 +47,9 @@ class CommandTest(unittest.TestCase):
         with self.assertRaises(SystemExit):
             command(self.root, "test")
 
-    def test_package_runs_the_sam_recipe_into_the_artifacts_dir(self):
-        self.write('[project]\nlanguage = "go"\n')
-        (self.root / "Makefile").write_text(
-            'build-ApiFunction:\n\techo built > "$(ARTIFACTS_DIR)/bootstrap"\n'
+    def test_package_runs_the_project_recipe_from_the_cli(self):
+        self.write(
+            '[project]\nlanguage = "go"\n\n[build]\npackage = "echo built > \\"$AP_ARTIFACTS/marker\\""\n'
         )
         cwd = os.getcwd()
         os.chdir(self.root)
@@ -49,7 +57,7 @@ class CommandTest(unittest.TestCase):
 
         self.assertEqual(main(["package"]), 0)
         self.assertEqual(
-            (self.root / ".ap-build" / "package" / "bootstrap").read_text().strip(),
+            (self.root / ".ap-build" / "package" / "marker").read_text().strip(),
             "built",
         )
 
@@ -74,3 +82,42 @@ class CommandTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 3)
         self.assertIn("ap-build test: exit 3", result.stdout)
+
+
+class PackageTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.addCleanup(self.tmp.cleanup)
+
+    def test_a_project_recipe_runs_and_gets_a_start_script(self):
+        (self.root / "platform.toml").write_text(
+            '[project]\nlanguage = "node"\n\n[build]\npackage = "echo built > \\"$AP_ARTIFACTS/marker\\""\nstart = "node server.js"\n'
+        )
+        artifacts = self.root / "out"
+
+        package(self.root, artifacts)
+
+        self.assertEqual((artifacts / "marker").read_text().strip(), "built")
+        script = (artifacts / "run.sh").read_text()
+        self.assertIn("exec node server.js", script)
+        self.assertTrue(os.access(artifacts / "run.sh", os.X_OK))
+
+    def test_every_language_has_a_start_and_a_packager(self):
+        for language in LANGUAGES:
+            self.assertIn("start", DEFAULTS[language])
+            self.assertIn(language, PACKAGERS)
+
+    def test_go_package_builds_bootstrap(self):
+        if not shutil.which("go"):
+            self.skipTest("go not installed")
+
+        (self.root / "platform.toml").write_text('[project]\nlanguage = "go"\n')
+        (self.root / "go.mod").write_text("module example.com/app\n\ngo 1.22\n")
+        main = self.root / "cmd" / "server"
+        main.mkdir(parents=True)
+        (main / "main.go").write_text("package main\n\nfunc main() {}\n")
+
+        package(self.root, self.root / "out")
+
+        self.assertTrue((self.root / "out" / "bootstrap").exists())
