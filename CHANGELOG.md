@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.0 — 2026-09-19
+
+### Features
+- **ap-build:** start verb and a per-language package for the Lambda Web Adapter
+
+### Bug Fixes
+- **ap-build:** package projects poetry does not build, and take the overlay from the plugin in CI
+
 ## v0.0.2 — 2026-09-16
 
 ### CI
