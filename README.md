@@ -20,7 +20,9 @@ docker run --rm -v "$PWD:/w" ghcr.io/actionplatform/build-node install build tes
 | <img src="assets/icons/java.svg" width="28" alt="Java"> <img src="assets/icons/kotlin.svg" width="28" alt="Kotlin"> | `build-java` | 17 · **21** · 25 | <img src="assets/icons/maven.svg" width="14" alt=""> Maven 3.9 — Java and Kotlin | `runtime-java` — distroless `java<version>` |
 | <img src="assets/icons/ruby.svg" width="28" alt="Ruby"> | `build-ruby` | **3.3** · 3.4 · 4.0 | bundler · a compiler for native gems | `runtime-ruby` — `ruby:<version>-slim`, non-root (no distroless Ruby exists) |
 
-Every build image also carries `git`, `make`, `zip` and `ap-build`. The build and runtime images of one version run the same language version. [`versions.json`](versions.json) lists each language's versions, the upstream image each one starts from, and the default.
+Every build image also carries `git`, `make`, `zip` and `ap-build` — `make` for `sam build`'s Makefile, `git` and `curl` for CI jobs that run inside the image. `build-python` installs its tools — poetry, poetry-plugin-export, aws-sam-cli — at the exact versions in [`images/python/tools.txt`](images/python/tools.txt) (Dependabot bumps them), in a virtualenv at `/opt/tools`, apart from the interpreter's own packages. `AP_PYTHON` defaults to the interpreter's version, so a Lambda package targets the Python the image runs.
+
+The build images run as root on purpose: CI jobs and `docker run -v "$PWD:/w"` write into a mounted checkout owned by the host's user, which a fixed non-root user inside the image cannot write. The runtime images run as `nonroot`. Upstream images are followed by tag (`python:3.12-slim`), not digest, so a rebuild picks up their security fixes; an app pins what it runs through the immutable `<version>-<release>` tags. The build and runtime images of one version run the same language version. [`versions.json`](versions.json) lists each language's versions, the upstream image each one starts from, and the default.
 
 Published on `ghcr.io/actionplatform/<image>` for `linux/amd64` and `linux/arm64`:
 
