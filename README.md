@@ -4,7 +4,7 @@
 
 <h1 align="center">images-base</h1>
 
-<p align="center">Build and runtime base images for every language the <a href="https://github.com/actionplatform/templates">templates</a> produce — one entrypoint, five verbs, the same everywhere.</p>
+<p align="center">Build and runtime base images for every language the <a href="https://github.com/actionplatform/templates">templates</a> produce — one entrypoint, six verbs, the same everywhere.</p>
 
 ```bash
 docker run --rm -v "$PWD:/w" ghcr.io/actionplatform/build-node install build test lint package
@@ -31,6 +31,8 @@ Published on `ghcr.io/actionplatform/<image>` for `linux/amd64` and `linux/arm64
 | `<language version>` | `build-python:3.13` | that language version, newest images-base release |
 | `<language version>-<release>` | `build-python:3.13-0.2.0` | that language version, pinned to an images-base release (`-0.2` follows its patches) |
 | `<release>`, `<major.minor>`, `<major>`, `latest` | `build-python:0` | the language's **default** version |
+
+`<language version>` and the release aliases move with every images-base release; `<language version>-<release>` never changes.
 
 A Dockerfile picks the version with an argument:
 
@@ -81,6 +83,8 @@ COPY --from=build /w/node_modules /app/node_modules
 CMD ["dist/server.js"]
 ```
 
+`runtime-python`'s entrypoint is `python3` on purpose: an app's image gives only the arguments (`CMD ["-m", "uvicorn", "app:app", …]`), the same way the distroless Node and Java runtimes take theirs. Every runtime runs as `65532:65532`, owner of `/app`.
+
 Lambda packages keep the managed runtimes (`python3.12`, `nodejs22.x`, `java17`, `provided.al2023`, `ruby3.3`); distroless is for containers.
 
 ## Who uses it
@@ -93,7 +97,7 @@ Lambda packages keep the managed runtimes (`python3.12`, `nodejs22.x`, `java17`,
 
 ## The contract with the templates
 
-CI renders one web template per language from `actionplatform/templates` **for every version in `versions.json`** (the template's `_<language>_version` set to it), lays the `aws/lambda` overlay on it and runs all five verbs inside the freshly built image — a template and its image cannot drift apart unnoticed. `ap-build` itself runs on Python 3.10 and newer, so it works inside every Python image.
+CI renders one web template per language from `actionplatform/templates` **for every version in `versions.json`** (the template's `_<language>_version` set to it), lays the `aws/lambda` overlay on it and runs `install build test lint package` inside the freshly built image — a template and its image cannot drift apart unnoticed. A runtime job then builds the app's container image from both images, starts it and calls `/health` — on amd64 for every version, and again on a native arm64 runner for each language's default. `ap-build` itself runs on Python 3.10 and newer, so it works inside every Python image.
 
 ## Releasing
 
