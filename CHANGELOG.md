@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.2.1 — 2026-09-27
+
+### Bug Fixes
+- **ap-build:** go build takes amd64, not x86_64
+
 ## v0.2.0 — 2026-09-27
 
 ### Features
