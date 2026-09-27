@@ -24,8 +24,16 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       include: ${{ steps.matrix.outputs.include }}
+      runtime: ${{ steps.runtime.outputs.include }}
     steps:
       - uses: actions/checkout@v5
+      - id: runtime
+        run: |
+          include=$(jq -c --argjson t '{"python":"projects/web/python/fastapi","node":"projects/web/node/fastify","go":"projects/web/go/gin","java":"projects/web/java/spring","ruby":"projects/web/ruby/sinatra"}' \
+            '[to_entries[] as $l | $l.value.versions | to_entries[] as $v
+              | ({runner: "ubuntu-latest"}, (select($v.key == $l.value.default) | {runner: "ubuntu-24.04-arm"}))
+              + {language: $l.key, version: $v.key, build: $v.value.build, runtime: $v.value.runtime, template: $t[$l.key]}]' versions.json)
+          echo "include=$include" >> "$GITHUB_OUTPUT"
       - id: matrix
         run: |
           include=$(jq -c --argjson t '{"python":"projects/web/python/fastapi","node":"projects/web/node/fastify","go":"projects/web/go/gin","java":"projects/web/java/spring","ruby":"projects/web/ruby/sinatra"}' \
@@ -67,3 +75,21 @@ jobs:
       - run: pipx run cookiecutter --no-input -o overlay plugin/apx_aws_lambda/overlays/cloud/aws/lambda project_name=demo language=${{ matrix.language }} type=web ci=github && cp -R overlay/demo/. out/demo/
       - run: docker run --rm -v "$PWD/out/demo:/w" build-${{ matrix.language }}:test install build test lint package
       - run: test -s out/demo/.ap-build/package/run.sh || test -s out/demo/.ap-build/package/bootstrap
+
+  runtime:
+    needs: versions
+    name: runtime (${{ matrix.language }} ${{ matrix.version }}, ${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.versions.outputs.runtime) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          repository: actionplatform/templates
+          path: templates
+      - run: pipx install cookiecutter
+      - run: .github/scripts/runtime-smoke.sh "${{ matrix.language }}" "${{ matrix.version }}" "${{ matrix.build }}" "${{ matrix.runtime }}" "${{ matrix.template }}" templates
+
