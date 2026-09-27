@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.2.0 — 2026-09-27
+
+### Features
+- **images:** one image per language version, tagged by it
+- **ap-build:** run on Python 3.10 and newer
+
 ## v0.1.0 — 2026-09-19
 
 ### Features
