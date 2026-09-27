@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import ap_build  # noqa: E402
 from ap_build import (  # noqa: E402
     DEFAULTS,
     GO_ARCH,
@@ -125,3 +126,25 @@ class PackageTest(unittest.TestCase):
 
     def test_go_arch_names_what_go_build_accepts(self):
         self.assertEqual(GO_ARCH, {"arm64": "arm64", "x86_64": "amd64"})
+
+    def test_ruby_package_carries_the_installed_gems(self):
+        (self.root / "platform.toml").write_text('[project]\nlanguage = "ruby"\n')
+        (self.root / "Gemfile").write_text('source "https://rubygems.org"\n')
+        (self.root / "Gemfile.lock").write_text("GEM\n")
+        (self.root / "app.rb").write_text("puts 1\n")
+
+        def bundle(command, cwd, env=None):
+            gem = cwd / "vendor" / "bundle" / "ruby" / "3.3.0" / "gems" / "rack-3.0"
+            gem.mkdir(parents=True)
+            (gem / "rack.rb").write_text("")
+
+        original = ap_build.sh
+        ap_build.sh = bundle
+        self.addCleanup(setattr, ap_build, "sh", original)
+
+        package(self.root, self.root / "out")
+
+        self.assertTrue(
+            (self.root / "out/vendor/bundle/ruby/3.3.0/gems/rack-3.0/rack.rb").exists()
+        )
+        self.assertTrue((self.root / "out" / "app.rb").exists())
