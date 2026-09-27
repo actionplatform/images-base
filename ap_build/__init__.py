@@ -23,6 +23,7 @@ LANGUAGES = ("python", "node", "go", "java", "kotlin", "ruby")
 
 ARCH = os.environ.get("AP_ARCH", "arm64")
 PY_PLATFORM = {"arm64": "manylinux2014_aarch64", "x86_64": "manylinux2014_x86_64"}
+GO_ARCH = {"arm64": "arm64", "x86_64": "amd64"}
 PY_VERSION = os.environ.get("AP_PYTHON", "3.12")
 GO_MAIN = "./cmd/server"
 
@@ -228,7 +229,7 @@ def package_node(root: Path, artifacts: Path) -> None:
 def package_go(root: Path, artifacts: Path) -> None:
     main = (manifest(root).get("build") or {}).get("main") or GO_MAIN
     sh(
-        f'GOOS=linux GOARCH={ARCH} CGO_ENABLED=0 go build -ldflags="-s -w" '
+        f'GOOS=linux GOARCH={GO_ARCH[ARCH]} CGO_ENABLED=0 go build -ldflags="-s -w" '
         f'-o "{artifacts}/bootstrap" {main}',
         root,
     )

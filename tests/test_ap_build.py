@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from ap_build import (  # noqa: E402
     DEFAULTS,
+    GO_ARCH,
     LANGUAGES,
     PACKAGERS,
     VERBS,
@@ -121,3 +122,6 @@ class PackageTest(unittest.TestCase):
         package(self.root, self.root / "out")
 
         self.assertTrue((self.root / "out" / "bootstrap").exists())
+
+    def test_go_arch_names_what_go_build_accepts(self):
+        self.assertEqual(GO_ARCH, {"arm64": "arm64", "x86_64": "amd64"})
