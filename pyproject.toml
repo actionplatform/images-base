@@ -4,8 +4,8 @@ version = "0.1.0"
 description = "The entrypoint of the Action Platform build images: install, build, test, lint and package a project with one verb per language"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.12"
-dependencies = []
+requires-python = ">=3.10"
+dependencies = ["tomli>=2; python_version < '3.11'"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6"]
