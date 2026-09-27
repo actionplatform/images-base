@@ -163,3 +163,39 @@ class PackageTest(unittest.TestCase):
         wheel = next(i for i, c in enumerate(ran) if c.endswith("/*.whl"))
         self.assertLess(export, wheel)
         self.assertIn("--no-deps", ran[wheel])
+
+    def jvm(self, *jars, chosen=None):
+        build = f'\n[build]\njar = "{chosen}"\n' if chosen else ""
+        (self.root / "platform.toml").write_text(
+            f'[project]\nlanguage = "java"\n{build}'
+        )
+        (self.root / "target").mkdir()
+
+        for name in jars:
+            (self.root / "target" / name).write_text(name)
+
+        original = ap_build.sh
+        ap_build.sh = lambda command, cwd, env=None: None
+        self.addCleanup(setattr, ap_build, "sh", original)
+
+    def test_two_jars_without_a_choice_stop_the_package(self):
+        self.jvm("app-1.0.jar", "app-1.0-all.jar", "app-1.0-sources.jar")
+
+        with self.assertRaises(SystemExit) as caught:
+            package(self.root, self.root / "out")
+
+        self.assertIn("app-1.0-all.jar, app-1.0.jar", str(caught.exception))
+
+    def test_build_jar_names_the_one_shipped(self):
+        self.jvm("app-1.0.jar", "app-1.0-all.jar", chosen="target/app-1.0-all.jar")
+
+        package(self.root, self.root / "out")
+
+        self.assertEqual((self.root / "out" / "app.jar").read_text(), "app-1.0-all.jar")
+
+    def test_a_single_jar_is_shipped(self):
+        self.jvm("app-1.0.jar", "app-1.0-sources.jar")
+
+        package(self.root, self.root / "out")
+
+        self.assertEqual((self.root / "out" / "app.jar").read_text(), "app-1.0.jar")

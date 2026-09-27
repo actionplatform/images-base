@@ -59,7 +59,7 @@ start   = "node dist/server.js"
 | `start` | `uvicorn app:app --port $PORT` | `node dist/server.js` | `./bootstrap` | `java -jar app.jar --server.port=$PORT` | `rackup -s webrick -p $PORT` |
 | `package` | wheel + deps for the target platform | `dist/` + pruned `node_modules` | static `bootstrap` from `./cmd/server` | `target/*.jar` → `app.jar` | app + `vendor/bundle` |
 
-`package` assembles what a **Lambda Web Adapter** function runs, under `AP_ARTIFACTS` (default `.ap-build/package`): the app, its dependencies and `run.sh` — `exec <start>` — for the managed runtimes, or `bootstrap` for Go on `provided.al2023`. `AP_ARCH` (`arm64`, default, or `x86_64`) and `AP_PYTHON` (`3.12`) pick the target. A project with its own `[build] package` line runs that instead and still gets `run.sh`; `[build] main` names the Go package to build.
+`package` assembles what a **Lambda Web Adapter** function runs, under `AP_ARTIFACTS` (default `.ap-build/package`): the app, its dependencies and `run.sh` — `exec <start>` — for the managed runtimes, or `bootstrap` for Go on `provided.al2023`. `AP_ARCH` (`arm64`, default, or `x86_64`) and `AP_PYTHON` (`3.12`) pick the target. A project with its own `[build] package` line runs that instead and still gets `run.sh`; `[build] main` names the Go package to build; `[build] jar` the jar to ship when `target/` holds more than one (Java and Kotlin stop otherwise).
 
 The contract every web project honours: **serve HTTP on `$PORT`**. That is what lets one cloud overlay deploy every language.
 

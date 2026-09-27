@@ -240,16 +240,34 @@ def package_go(root: Path, artifacts: Path) -> None:
 
 def package_jvm(root: Path, artifacts: Path) -> None:
     sh(command(root, "build"), root)
-    jars = sorted(
-        p
-        for p in (root / "target").glob("*.jar")
-        if not p.name.endswith(("-sources.jar", "-javadoc.jar"))
-    )
+    chosen = (manifest(root).get("build") or {}).get("jar")
 
-    if not jars:
-        raise SystemExit("ap-build package: mvn package produced no jar under target/")
+    if chosen:
+        jar = root / chosen
 
-    shutil.copy2(jars[-1], artifacts / "app.jar")
+        if not jar.is_file():
+            raise SystemExit(f"ap-build package: [build] jar {chosen} does not exist")
+    else:
+        jars = sorted(
+            p
+            for p in (root / "target").glob("*.jar")
+            if not p.name.endswith(("-sources.jar", "-javadoc.jar", "-tests.jar"))
+        )
+
+        if not jars:
+            raise SystemExit(
+                "ap-build package: mvn package produced no jar under target/"
+            )
+
+        if len(jars) > 1:
+            names = ", ".join(p.name for p in jars)
+            raise SystemExit(
+                f"ap-build package: target/ holds {len(jars)} jars ({names}); name the one to ship with [build] jar"
+            )
+
+        jar = jars[0]
+
+    shutil.copy2(jar, artifacts / "app.jar")
     write_start(root, artifacts)
 
 
