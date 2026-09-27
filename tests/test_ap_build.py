@@ -148,3 +148,18 @@ class PackageTest(unittest.TestCase):
             (self.root / "out/vendor/bundle/ruby/3.3.0/gems/rack-3.0/rack.rb").exists()
         )
         self.assertTrue((self.root / "out" / "app.rb").exists())
+
+    def test_a_python_package_installs_the_lock_then_the_wheel_without_deps(self):
+        (self.root / "platform.toml").write_text('[project]\nlanguage = "python"\n')
+        (self.root / "pyproject.toml").write_text('[tool.poetry]\nname = "app"\n')
+        ran = []
+        original = ap_build.sh
+        ap_build.sh = lambda command, cwd, env=None: ran.append(command)
+        self.addCleanup(setattr, ap_build, "sh", original)
+
+        package(self.root, self.root / "out")
+
+        export = next(i for i, c in enumerate(ran) if c.startswith("poetry export"))
+        wheel = next(i for i, c in enumerate(ran) if c.endswith("/*.whl"))
+        self.assertLess(export, wheel)
+        self.assertIn("--no-deps", ran[wheel])

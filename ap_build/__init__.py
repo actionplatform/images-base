@@ -199,19 +199,20 @@ def package_python(root: Path, artifacts: Path) -> None:
     )
     poetry = (manifest_of(root, "pyproject.toml").get("tool") or {}).get("poetry") or {}
 
+    requirements = root / ".ap-build" / "requirements.txt"
+    requirements.parent.mkdir(parents=True, exist_ok=True)
+    sh(
+        f'poetry export --no-interaction --only main --without-hashes -f requirements.txt -o "{requirements}"',
+        root,
+    )
+    sh(f'{pip} -r "{requirements}"', root)
+
     if poetry.get("package-mode", True):
         dist = root / ".ap-build" / "dist"
         shutil.rmtree(dist, ignore_errors=True)
         sh(f'poetry build --no-interaction -f wheel -o "{dist}"', root)
-        sh(f'{pip} "{dist}"/*.whl', root)
+        sh(f'{pip} --no-deps "{dist}"/*.whl', root)
     else:
-        requirements = root / ".ap-build" / "requirements.txt"
-        requirements.parent.mkdir(parents=True, exist_ok=True)
-        sh(
-            f'poetry export --no-interaction --only main --without-hashes -f requirements.txt -o "{requirements}"',
-            root,
-        )
-        sh(f'{pip} -r "{requirements}"', root)
         copy_sources(root, artifacts, {"pyproject.toml", "poetry.lock"})
 
     write_start(root, artifacts)
