@@ -262,6 +262,7 @@ def package_ruby(root: Path, artifacts: Path) -> None:
     sh("bundle install --quiet", root, env)
     copy_sources(root, artifacts, {".bundle"})
     copy_tree(root / "Gemfile.lock", artifacts / "Gemfile.lock")
+    copy_tree(root / "vendor" / "bundle", artifacts / "vendor" / "bundle")
 
     bundle = artifacts / ".bundle"
     bundle.mkdir(exist_ok=True)
