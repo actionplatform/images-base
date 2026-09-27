@@ -57,7 +57,6 @@ jobs:
           file: images/${{ matrix.language }}/Dockerfile
           build-args: |
             BASE=${{ matrix.base }}
-            VERSION=${{ matrix.version }}
           load: true
           tags: build-${{ matrix.language }}:test
           cache-from: type=gha,scope=build-${{ matrix.language }}-${{ matrix.version }}

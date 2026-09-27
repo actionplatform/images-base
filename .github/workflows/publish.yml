@@ -64,7 +64,6 @@ jobs:
           file: images/${{ matrix.language }}/${{ matrix.kind == 'build' && 'Dockerfile' || 'runtime.Dockerfile' }}
           build-args: |
             BASE=${{ matrix.base }}
-            VERSION=${{ matrix.version }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
