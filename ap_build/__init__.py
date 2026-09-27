@@ -24,7 +24,9 @@ LANGUAGES = ("python", "node", "go", "java", "kotlin", "ruby")
 ARCH = os.environ.get("AP_ARCH", "arm64")
 PY_PLATFORM = {"arm64": "manylinux2014_aarch64", "x86_64": "manylinux2014_x86_64"}
 GO_ARCH = {"arm64": "arm64", "x86_64": "amd64"}
-PY_VERSION = os.environ.get("AP_PYTHON") or f"{sys.version_info.major}.{sys.version_info.minor}"
+PY_VERSION = (
+    os.environ.get("AP_PYTHON") or f"{sys.version_info.major}.{sys.version_info.minor}"
+)
 GO_MAIN = "./cmd/server"
 
 DEFAULTS: dict[str, dict[str, str]] = {
