@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import ap_build  # noqa: E402
 from ap_build import (  # noqa: E402
     DEFAULTS,
     GO_ARCH,
@@ -127,8 +128,6 @@ class PackageTest(unittest.TestCase):
         self.assertEqual(GO_ARCH, {"arm64": "arm64", "x86_64": "amd64"})
 
     def test_ruby_package_carries_the_installed_gems(self):
-        import ap_build
-
         (self.root / "platform.toml").write_text('[project]\nlanguage = "ruby"\n')
         (self.root / "Gemfile").write_text('source "https://rubygems.org"\n')
         (self.root / "Gemfile.lock").write_text("GEM\n")
