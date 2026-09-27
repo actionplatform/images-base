@@ -12,15 +12,30 @@ docker run --rm -v "$PWD:/w" ghcr.io/actionplatform/build-node install build tes
 
 ## Images
 
-| | Build image | Toolchain | Runtime image |
-|:-:|---|---|---|
-| <img src="assets/icons/python.svg" width="28" alt="Python"> | `build-python` | Python 3.12 · <img src="assets/icons/poetry.svg" width="14" alt=""> poetry · aws-sam-cli | `runtime-python` — distroless `python3` |
-| <img src="assets/icons/nodejs.svg" width="28" alt="Node.js"> | `build-node` | Node 22 · <img src="assets/icons/npm.svg" width="14" alt=""> npm | `runtime-node` — distroless `nodejs22` |
-| <img src="assets/icons/go.svg" width="28" alt="Go"> | `build-go` | Go 1.23 (`GOTOOLCHAIN=auto`, `CGO_ENABLED=0`) | `runtime-go` — distroless `static` |
-| <img src="assets/icons/java.svg" width="28" alt="Java"> <img src="assets/icons/kotlin.svg" width="28" alt="Kotlin"> | `build-java` | JDK 21 · <img src="assets/icons/maven.svg" width="14" alt=""> Maven 3.9 — Java and Kotlin | `runtime-java` — distroless `java21` |
-| <img src="assets/icons/ruby.svg" width="28" alt="Ruby"> | `build-ruby` | Ruby 3.3 · bundler · a compiler for native gems | `runtime-ruby` — `ruby:3.3-slim`, non-root (no distroless Ruby exists) |
+| | Build image | Versions (**default**) | Toolchain | Runtime image |
+|:-:|---|---|---|---|
+| <img src="assets/icons/python.svg" width="28" alt="Python"> | `build-python` | 3.10 · 3.11 · **3.12** · 3.13 · 3.14 | <img src="assets/icons/poetry.svg" width="14" alt=""> poetry · aws-sam-cli | `runtime-python` — `python:<version>-slim`, non-root, `python3` as entrypoint (distroless ships only the Debian Python) |
+| <img src="assets/icons/nodejs.svg" width="28" alt="Node.js"> | `build-node` | **22** · 24 · 26 | <img src="assets/icons/npm.svg" width="14" alt=""> npm | `runtime-node` — distroless `nodejs<version>` |
+| <img src="assets/icons/go.svg" width="28" alt="Go"> | `build-go` | 1.26 · **1.27** | `GOTOOLCHAIN=auto`, `CGO_ENABLED=0` | `runtime-go` — distroless `static` |
+| <img src="assets/icons/java.svg" width="28" alt="Java"> <img src="assets/icons/kotlin.svg" width="28" alt="Kotlin"> | `build-java` | 17 · **21** · 25 | <img src="assets/icons/maven.svg" width="14" alt=""> Maven 3.9 — Java and Kotlin | `runtime-java` — distroless `java<version>` |
+| <img src="assets/icons/ruby.svg" width="28" alt="Ruby"> | `build-ruby` | **3.3** · 3.4 · 4.0 | bundler · a compiler for native gems | `runtime-ruby` — `ruby:<version>-slim`, non-root (no distroless Ruby exists) |
 
-Every build image also carries `git`, `make`, `zip` and `ap-build`. Published on `ghcr.io/actionplatform/<image>` as `<major>`, `<major.minor>`, `<version>` and `latest`, for `linux/amd64` and `linux/arm64`.
+Every build image also carries `git`, `make`, `zip` and `ap-build`. The build and runtime images of one version run the same language version. [`versions.json`](versions.json) lists each language's versions, the upstream image each one starts from, and the default.
+
+Published on `ghcr.io/actionplatform/<image>` for `linux/amd64` and `linux/arm64`:
+
+| Tag | Example | Is |
+|---|---|---|
+| `<language version>` | `build-python:3.13` | that language version, newest images-base release |
+| `<language version>-<release>` | `build-python:3.13-0.2.0` | that language version, pinned to an images-base release (`-0.2` follows its patches) |
+| `<release>`, `<major.minor>`, `<major>`, `latest` | `build-python:0` | the language's **default** version |
+
+A Dockerfile picks the version with an argument:
+
+```dockerfile
+ARG PYTHON_VERSION=3.12
+FROM ghcr.io/actionplatform/build-python:${PYTHON_VERSION} AS build
+```
 
 ## ap-build
 
@@ -53,11 +68,12 @@ A verb prints the line it runs and exits with its status; an empty line is a no-
 A container-shipped app ends in the language's runtime image — two stages, the same shape for every language:
 
 ```dockerfile
-FROM ghcr.io/actionplatform/build-node AS build
+ARG NODE_VERSION=22
+FROM ghcr.io/actionplatform/build-node:${NODE_VERSION} AS build
 COPY . .
 RUN ap-build install build
 
-FROM ghcr.io/actionplatform/runtime-node
+FROM ghcr.io/actionplatform/runtime-node:${NODE_VERSION}
 COPY --from=build /w/dist /app/dist
 COPY --from=build /w/node_modules /app/node_modules
 CMD ["dist/server.js"]
@@ -75,7 +91,7 @@ Lambda packages keep the managed runtimes (`python3.12`, `nodejs22.x`, `java17`,
 
 ## The contract with the templates
 
-CI renders one web template per language from `actionplatform/templates`, lays the `aws/lambda` overlay on it and runs all five verbs inside the freshly built image — a template and its image cannot drift apart unnoticed.
+CI renders one web template per language from `actionplatform/templates` **for every version in `versions.json`** (the template's `_<language>_version` set to it), lays the `aws/lambda` overlay on it and runs all five verbs inside the freshly built image — a template and its image cannot drift apart unnoticed. `ap-build` itself runs on Python 3.10 and newer, so it works inside every Python image.
 
 ## Releasing
 

@@ -1,4 +1,5 @@
-FROM gcr.io/distroless/static-debian12
+ARG BASE=gcr.io/distroless/static-debian12
+FROM ${BASE}
 LABEL org.opencontainers.image.source=https://github.com/actionplatform/images-base
 WORKDIR /app
 USER nonroot

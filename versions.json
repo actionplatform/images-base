@@ -1,0 +1,43 @@
+{
+  "python": {
+    "default": "3.12",
+    "versions": {
+      "3.10": {"build": "python:3.10-slim", "runtime": "python:3.10-slim"},
+      "3.11": {"build": "python:3.11-slim", "runtime": "python:3.11-slim"},
+      "3.12": {"build": "python:3.12-slim", "runtime": "python:3.12-slim"},
+      "3.13": {"build": "python:3.13-slim", "runtime": "python:3.13-slim"},
+      "3.14": {"build": "python:3.14-slim", "runtime": "python:3.14-slim"}
+    }
+  },
+  "node": {
+    "default": "22",
+    "versions": {
+      "22": {"build": "node:22-bookworm-slim", "runtime": "gcr.io/distroless/nodejs22-debian12"},
+      "24": {"build": "node:24-bookworm-slim", "runtime": "gcr.io/distroless/nodejs24-debian13"},
+      "26": {"build": "node:26-bookworm-slim", "runtime": "gcr.io/distroless/nodejs26-debian13"}
+    }
+  },
+  "go": {
+    "default": "1.27",
+    "versions": {
+      "1.26": {"build": "golang:1.26-bookworm", "runtime": "gcr.io/distroless/static-debian12"},
+      "1.27": {"build": "golang:1.27-bookworm", "runtime": "gcr.io/distroless/static-debian12"}
+    }
+  },
+  "java": {
+    "default": "21",
+    "versions": {
+      "17": {"build": "maven:3.9-eclipse-temurin-17", "runtime": "gcr.io/distroless/java17-debian12"},
+      "21": {"build": "maven:3.9-eclipse-temurin-21", "runtime": "gcr.io/distroless/java21-debian12"},
+      "25": {"build": "maven:3.9-eclipse-temurin-25", "runtime": "gcr.io/distroless/java25-debian13"}
+    }
+  },
+  "ruby": {
+    "default": "3.3",
+    "versions": {
+      "3.3": {"build": "ruby:3.3-slim-bookworm", "runtime": "ruby:3.3-slim-bookworm"},
+      "3.4": {"build": "ruby:3.4-slim-bookworm", "runtime": "ruby:3.4-slim-bookworm"},
+      "4.0": {"build": "ruby:4.0-slim-bookworm", "runtime": "ruby:4.0-slim-bookworm"}
+    }
+  }
+}

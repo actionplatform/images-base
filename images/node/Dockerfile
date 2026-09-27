@@ -1,9 +1,10 @@
+ARG BASE=node:22-bookworm-slim
 FROM python:3.12-slim AS apbuild
 COPY pyproject.toml README.md LICENSE /src/
 COPY ap_build /src/ap_build
 RUN pip install --no-cache-dir --target /opt/ap-build /src
 
-FROM node:22-bookworm-slim
+FROM ${BASE}
 LABEL org.opencontainers.image.source=https://github.com/actionplatform/images-base
 RUN apt-get update -qq \
  && apt-get install -y --no-install-recommends git make zip curl ca-certificates python3 \
