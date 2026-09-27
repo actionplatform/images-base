@@ -1,9 +1,10 @@
+ARG BASE=maven:3.9-eclipse-temurin-21
 FROM python:3.12-slim AS apbuild
 COPY pyproject.toml README.md LICENSE /src/
 COPY ap_build /src/ap_build
 RUN pip install --no-cache-dir --target /opt/ap-build /src
 
-FROM maven:3.9-eclipse-temurin-21
+FROM ${BASE}
 LABEL org.opencontainers.image.source=https://github.com/actionplatform/images-base
 RUN apt-get update -qq \
  && apt-get install -y --no-install-recommends git make zip python3 \

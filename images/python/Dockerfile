@@ -1,4 +1,6 @@
-FROM python:3.12-slim
+ARG BASE=python:3.12-slim
+FROM ${BASE}
+ARG VERSION=3.12
 LABEL org.opencontainers.image.source=https://github.com/actionplatform/images-base
 RUN apt-get update -qq \
  && apt-get install -y --no-install-recommends git make zip curl ca-certificates \
@@ -6,6 +8,6 @@ RUN apt-get update -qq \
 COPY pyproject.toml README.md LICENSE /src/
 COPY ap_build /src/ap_build
 RUN pip install --no-cache-dir /src "poetry>=1.8" poetry-plugin-export aws-sam-cli && rm -rf /src
-ENV POETRY_VIRTUALENVS_IN_PROJECT=true SAM_CLI_TELEMETRY=0
+ENV POETRY_VIRTUALENVS_IN_PROJECT=true SAM_CLI_TELEMETRY=0 AP_PYTHON=${VERSION}
 WORKDIR /w
 ENTRYPOINT ["ap-build"]

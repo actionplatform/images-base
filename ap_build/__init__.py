@@ -11,7 +11,11 @@ import os
 import shutil
 import subprocess
 import sys
-import tomllib
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
 from pathlib import Path
 
 VERBS = ("install", "build", "test", "lint", "package", "start")
