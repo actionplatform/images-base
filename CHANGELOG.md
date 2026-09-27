@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.3.0 — 2026-09-27
+
+### Bug Fixes
+- **runtime:** /app belongs to the non-root user in Python and Ruby
+- **ap-build:** the JVM package ships the jar it was told, or stops
+- **ap-build:** a Python package installs poetry.lock's versions
+- **ap-build:** the Ruby package carries its installed gems
+- **build-python:** pinned tools in a venv; AP_PYTHON from the interpreter
+
+### Docs
+- **readme:** six verbs, moving tags, the runtime contract
+
+### Tests
+- import ap_build at the top
+
+### CI
+- run every runtime image with a real app before it ships
+- **publish:** images publish from a vX.Y.Z tag only
+
+### Style
+- format ap_build
+
 ## v0.2.1 — 2026-09-27
 
 ### Bug Fixes
