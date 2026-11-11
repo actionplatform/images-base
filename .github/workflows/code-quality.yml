@@ -12,7 +12,7 @@ jobs:
       matrix:
         python: ["3.10", "3.12", "3.14"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
@@ -26,7 +26,7 @@ jobs:
       include: ${{ steps.matrix.outputs.include }}
       runtime: ${{ steps.runtime.outputs.include }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - id: runtime
         run: |
           include=$(jq -c --argjson t '{"python":"projects/web/python/fastapi","node":"projects/web/node/fastify","go":"projects/web/go/gin","java":"projects/web/java/spring","ruby":"projects/web/ruby/sinatra"}' \
@@ -49,12 +49,12 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.versions.outputs.include) }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           repository: actionplatform/templates
           path: templates
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           repository: actionplatform/apx-aws-lambda
           path: plugin
@@ -85,8 +85,8 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.versions.outputs.runtime) }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           repository: actionplatform/templates
           path: templates
