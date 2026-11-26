@@ -101,4 +101,4 @@ CI renders one web template per language from `actionplatform/templates` **for e
 
 ## Releasing
 
-`action-platform release` cuts `vX.Y.Z`; the tag publishes every image. The strategy behind the repository: [images-base.md](https://github.com/actionplatform/strategy/blob/main/images-base.md).
+`action-platform release` cuts `vX.Y.Z`; the tag publishes every image.
